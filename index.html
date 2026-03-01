@@ -582,7 +582,7 @@ body::after{
     <img class="logo" id="logoImg" alt="سَوا"/>
     <div class="bismillah">بِسْمِ اللهِ الرَّحْمَنِ الرَّحِيمِ</div>
     <div class="main-title">متتبع حفظ الأربعين النووية</div>
-    <div class="sub">مبادرة سَوا · اضغطي على الحديث لتغيير مستوى حفظه</div>
+    <div class="sub">اضغطي على الحديث لتغيير مستوى حفظه</div>
     <div class="tips">
       <span class="tip">
         <span class="tdot" style="background:rgba(45,92,66,.25)"></span>١ ضغطة · حفظتُ جزءًا
@@ -739,8 +739,19 @@ function onTap(id){
       setS(id,2);
       const h=hadiths.find(x=>x.id===id);
       const st=calcStats();
+      const shortTitles = [
+        "أحسنتِ! ✨","جميل! 🌿","رائع! 💚","زادكِ الله 🌸","بارك الله فيكِ ✦","لا شكَّ أنتِ مُجتهدة 🌟"
+      ];
+      const midTitles = [
+        "ما شاء الله، هذا ليس سهلاً! 🌿","همّة عالية! ✨","قلبٌ حافظ 💚","ما شاء الله عليكِ 🌸","هكذا تُبنى العظمة ✦","تستحقين التهنئة 🌟"
+      ];
+      const longTitles = [
+        "تبارك الرحمن! 🏆","هذا يحتاج عزيمة كعزيمتكِ! ✨","ما أعظم همّتكِ 🌿","أنتِ استثناء 💚","الصابرات يفزن 🌸","هذا ليس حفظًا.. هذا إرادة ✦"
+      ];
+      const pool = h.len==="قصير" ? shortTitles : h.len==="وسط" ? midTitles : longTitles;
+      const dynTitle = pool[Math.floor(Math.random()*pool.length)];
       showPopupWithMotivation(
-        "أحسنتِ 🌿",
+        dynTitle,
         `حفظتِ: ${h.title}  ·  +${xpFor(h)} نقطة`,
         st.done, h.title, st.xp
       );
@@ -784,21 +795,88 @@ function showPopup(t,m){
 }
 
 /* ── showPopup مع رسالة تشجيعية مولّدة ── */
-async function showPopupWithMotivation(title, msg, doneCount, hadithTitle, xpTotal){
-  document.getElementById("popTitle").textContent=title;
-  document.getElementById("popMsg").textContent=msg;
+/* ── بنك رسائل محلية للاحتياط أو إذا تعذّر الاتصال ── */
+const localMotivation = [
+  // بداية
+  ["البداية الصادقة تُخبر عن نهاية جميلة.
+ابدئي بثقة، الله يعلم نيّتكِ.", 0, 15],
+  ["كل حديث تحفظينه هو بذرة نور في قلبكِ،
+ستحصدينها في أوقات تحتاجينها.", 0, 15],
+  ["أوّل الرحلة أجملها، لأنّ فيها شجاعة البدء.
+أنتِ شجاعة.", 0, 15],
 
-  const motBox = document.getElementById("popMotivation");
+  // تأسيس
+  ["ما تبنينه الآن بصبر
+لن تهدمه الأيام بسهولة.", 10, 35],
+  ["التكرار الهادئ يصنع الراسخات.
+لا تستعجلي النتيجة.", 10, 35],
+  ["حفظكِ لهذا الحديث هو محادثة بينكِ وبين النبي ﷺ
+عبر الزمن.", 10, 35],
+
+  // منتصف
+  ["المنتصف هو أصعب المحطات وأجملها.
+من عبرها علمًا، عبرها شخصيةً.", 30, 60],
+  ["أنتِ الآن تبني شيئًا لن تنسيه.
+هذا العلم سيكلّمكِ في لحظات السكوت.", 30, 60],
+  ["لا تقيسي نفسكِ بالأخريات.
+قيسي نفسكِ بمن كنتِ أمس.", 30, 60],
+
+  // اقتراب
+  ["بقي أقل مما مضى.
+كل حديث الآن هو خطوة نحو شيء نادر.", 55, 85],
+  ["الواصلة لا تتوقف عند مشارف الهدف.
+أنتِ قريبة جدًا.", 55, 85],
+  ["اجعلي ما تبقّى أمتن ما حفظتِ،
+الختام يتذكّره القلب.", 55, 85],
+
+  // نهاية
+  ["لحظات قليلة تفصلكِ عن إنجاز
+لا تحمله إلا من أرادته حقًا.", 80, 99],
+  ["تقفين الآن حيث وقفت الحافظات قبلكِ.
+واصلي.", 80, 99],
+
+  // عام (يُستخدم في أي وقت)
+  ["العلم الذي يسكن القلب
+لا يُسرق ولا يُنسى.", 0, 100],
+  ["كل ضغطة هنا هي ثمرة لحظة اخترتِ فيها نفسكِ الأفضل.", 0, 100],
+  ["الله يرى جهدكِ كاملًا،
+حتى ما لا يراه أحد.", 0, 100],
+  ["حافظة القرآن والحديث امرأة محاطة بالنور
+من حيث لا تدري.", 0, 100],
+];
+
+let lastMotIdx = -1;
+
+function getLocalMotivation(xpTotal) {
+  const pct = Math.round(xpTotal);
+  const suitable = localMotivation.filter(m => pct >= m[1] && pct <= m[2]);
+  const pool = suitable.length ? suitable : localMotivation.filter(m => m[1]===0 && m[2]===100);
+  // تجنّب تكرار نفس الرسالة
+  let idx;
+  do { idx = Math.floor(Math.random() * pool.length); }
+  while (pool.length > 1 && idx === lastMotIdx);
+  lastMotIdx = idx;
+  return pool[idx][0];
+}
+
+async function showPopupWithMotivation(title, msg, doneCount, hadithTitle, xpTotal){
+  // 1) أظهر البوب أب فورًا مع النص
+  document.getElementById("popTitle").textContent = title;
+  document.getElementById("popMsg").textContent   = msg;
+
+  const motBox  = document.getElementById("popMotivation");
   const loading = document.getElementById("motLoading");
   const textEl  = document.getElementById("motText");
 
-  motBox.style.display="block";
-  loading.style.display="flex";
-  textEl.style.display="none";
-  textEl.textContent="";
-
+  // أظهر البوب أب + مؤشر التحميل معًا
+  motBox.style.display  = "block";
+  loading.style.display = "flex";
+  textEl.style.display  = "none";
+  textEl.textContent    = "";
   document.getElementById("popup").classList.add("show");
 
+  // 2) جرّبي API أولًا — مع مهلة قصيرة
+  let text = "";
   try {
     const pct = Math.round(xpTotal);
     const stage =
@@ -807,39 +885,43 @@ async function showPopupWithMotivation(title, msg, doneCount, hadithTitle, xpTot
       pct <= 40   ? "في مرحلة التأسيس" :
       pct <= 60   ? "في المنتصف" :
       pct <= 80   ? "في مرحلة الاقتراب" :
-      pct < 100   ? "قريبة جدًا من الختام" :
-                    "أتمّت الرحلة كاملة";
+      pct < 100   ? "قريبة جدًا من الختام" : "أتمّت الرحلة كاملة";
 
-    const prompt = `أنتِ مُحفِّزة لطيفة لشابات مسلمات في عمر ١٦-٢٠ سنة يحفظن الأربعين النووية.
-اكتبي جملة تشجيعية واحدة فقط، قصيرة (سطر أو سطرين بالأكثر)، باللغة العربية الفصيحة الجميلة وغير المبتذلة.
-السياق: الطالبة للتو حفظت حديث "${hadithTitle}"، وهي الآن ${stage} (وصلت ${doneCount} من 42 حديثًا).
-الجملة يجب أن: تكون مباشرة لها (خاطبيها بـ"أنتِ")، دافئة وصادقة، وتربط الحفظ بالمعنى أو الثمرة الروحية.
-لا تكرري نفس الأفكار، ولا تبدئي بـ"ماشاءالله" أو "أحسنتِ" لأن ذلك موجود بالفعل. أعطي فقط الجملة، بدون أي مقدمة أو شرح.`;
+    const prompt = `أنتِ مُحفِّزة لطيفة لشابات مسلمات في عمر ١٦-٢٠ يحفظن الأربعين النووية.
+اكتبي جملة تشجيعية واحدة فقط، سطر أو سطرين، بالعربية الفصيحة الجميلة.
+السياق: للتو حفظت حديث "${hadithTitle}"، وهي الآن ${stage} (${doneCount} من 42).
+خاطبيها بـ"أنتِ"، دافئة وصادقة، تربط الحفظ بثمرته الروحية.
+لا تبدئي بـ"ماشاءالله" أو "أحسنتِ". أعطي الجملة مباشرةً فقط.`;
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 6000);
 
     const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({
-        model:"claude-sonnet-4-20250514",
-        max_tokens:120,
-        messages:[{role:"user",content:prompt}]
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      signal: controller.signal,
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 100,
+        messages: [{role:"user", content:prompt}]
       })
     });
+    clearTimeout(timeout);
 
     const data = await res.json();
-    const text = data?.content?.[0]?.text?.trim() || "";
-
-    loading.style.display="none";
-    if(text){
-      textEl.textContent = text;
-      textEl.style.display="block";
-    } else {
-      motBox.style.display="none";
-    }
-  } catch(err){
-    loading.style.display="none";
-    motBox.style.display="none";
+    text = data?.content?.[0]?.text?.trim() || "";
+  } catch(err) {
+    // لا اتصال أو انتهت المهلة — سنستخدم البنك المحلي
+    text = "";
   }
+
+  // 3) إذا لم ينجح API، استخدمي البنك المحلي
+  if (!text) text = getLocalMotivation(xpTotal);
+
+  // 4) اعرضي النص
+  loading.style.display = "none";
+  textEl.textContent    = text;
+  textEl.style.display  = "block";
 }
 
 function hidePopup(){
